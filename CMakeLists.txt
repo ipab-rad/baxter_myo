@@ -11,7 +11,7 @@ find_package(catkin
   baxter_interface
 )
 
-# catkin_python_setup() Add this when adding a setup.py
+catkin_python_setup()
 
 catkin_package(
   CATKIN_DEPENDS

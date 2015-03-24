@@ -29,6 +29,8 @@ from baxter_core_msgs.srv import (
     SolvePositionIKRequest,
 )
 
+from server import SocketListener
+
 class BaxterMyo(object):
 
     def __init__(self, limb):
@@ -85,7 +87,8 @@ class BaxterMyo(object):
         resp = iksvc(ik_request)
         return dict(zip(resp.joints[0].name, resp.joints[0].position))
 
-    def find_joint_pose(self, pose, targ_x=0.0, targ_y=0.0, targ_z=0.0, targ_ox=0.0, targ_oy=0.0, targ_oz=0.0):
+    def find_joint_pose(self, pose, targ_x=0.0, targ_y=0.0, targ_z=0.0,
+                        targ_ox=0.0, targ_oy=0.0, targ_oz=0.0):
         '''
         Finds the joint position of the arm given some pose and the
         offsets from it (to avoid opening the structure all the time
@@ -119,21 +122,25 @@ class BaxterMyo(object):
         i = ""
         while not rospy.is_shutdown():
             if self.received:
-                new_poss = self.find_joint_pose(self.limb.endpoint_pose(),
-                                               targ_x=float(self.data.linear.x),
-                                               targ_y=float(self.data.linear.y),
-                                               targ_z=float(self.data.linear.z),
-                                               targ_ox=float(self.data.angular.x),
-                                               targ_oy=float(self.data.angular.y),
-                                               targ_oz=float(self.data.angular.z))
+                new_poss = self.find_joint_pose(
+                    self.limb.endpoint_pose(),
+                    targ_x=float(self.data.linear.x),
+                    targ_y=float(self.data.linear.y),
+                    targ_z=float(self.data.linear.z),
+                    targ_ox=float(self.data.angular.x),
+                    targ_oy=float(self.data.angular.y),
+                    targ_oz=float(self.data.angular.z))
                 rospy.loginfo("Position sent!")
-                self.limb.move_to_joint_positions(new_poss)   # DISABLED MOTION
+                self.limb.move_to_joint_positions(new_poss)
                 self.received = False
 
 
 def main():
     bm = BaxterMyo('right')
-    # ang = tf.transformations.euler_from_quaternion([-0.01832673002976744, 0.7027380713920065, 0.029706873965974517, 0.7105918910470546])
+    # ang = tf.transformations.euler_from_quaternion(
+    #     [-0.01832673002976744, 0.7027380713920065,
+    #      0.029706873965974517, 0.7105918910470546]
+    # )
     # print(ang)
     bm.move_loop()
 
