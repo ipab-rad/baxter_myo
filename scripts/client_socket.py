@@ -12,7 +12,8 @@ while 1:
         x = float(random.randint(1, 360))
         y = float(random.randint(1, 360))
         z = float(random.randint(1, 360))
-        st = "" + str(x) + " " + str(y) + " " + str(z)
+        st = "" + str(x) + " " + str(y) + " " + str(z) \
+             +  " " + str(x) + " " + str(y) + " " + str(z)
         print "Sending:", st
         s.sendall(st)
         data = s.recv(1024)
