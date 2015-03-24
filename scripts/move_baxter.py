@@ -29,7 +29,6 @@ from baxter_core_msgs.srv import (
     SolvePositionIKRequest,
 )
 
-from server import SocketListener
 
 class BaxterMyo(object):
 

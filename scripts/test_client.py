@@ -11,9 +11,9 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((HOST, PORT))
 while 1:
     try:
-        x = random.uniform(-0.2, 0.2)
-        y = random.uniform(-0.2, 0.2)
-        z = random.uniform(-0.2, 0.2)
+        x = random.uniform(-0.1, 0.1)
+        y = random.uniform(-0.1, 0.1)
+        z = random.uniform(-0.1, 0.1)
         o_x = random.uniform(0.0, 0.0)
         o_y = random.uniform(-0.0, -0.0)
         o_z = random.uniform(-0.0, 0.0)
