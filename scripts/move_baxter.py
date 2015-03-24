@@ -13,6 +13,7 @@ from geometry_msgs.msg import (
     PoseStamped,
     Pose,
     Point,
+    Twist,
     # Quaternion,
 )
 
@@ -37,8 +38,18 @@ class BaxterMyo(object):
         rospy.loginfo("Enabling_Baxter...")
         self._rs = baxter_interface.RobotEnable(CHECK_VERSION)
         self._rs.enable()
+
+        rospy.Subscriber("myo_data", Twist, self.callback)
+        rospy.loginfo("Subscribed to myo_data")
         # self._tuck = baxter_tools.Tuck(False) # untucks
         # TODO add tucking
+
+    def callback(self, data):
+        rospy.loginfo(rospy.get_caller_id() + " heard: \
+         \n Linear [%f, %f, %f] \
+         \n Angular [%f, %f, %f]", \
+          data.linear.x, data.linear.y, data.linear.z, \
+          data.angular.x, data.angular.y, data.angular.z)
 
     def find_joint_position(self, pose, x_off=0.0, y_off=0.0, z_off=0.0):
         '''
@@ -87,7 +98,7 @@ class BaxterMyo(object):
                                            x_off=float(x),
                                            y_off=float(y),
                                            z_off=float(z))
-            self.limb.move_to_joint_positions(new_poss)
+            # self.limb.move_to_joint_positions(new_poss)   # DISABLED MOTION
             print "############## Finished moving ##############"
 
 
