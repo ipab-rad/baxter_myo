@@ -23,7 +23,7 @@ while 1:
         print "Sending:", st
         s.sendall(st)
         data = s.recv(1024)
-        time.sleep(1)
+        time.sleep(0.1)
     except KeyboardInterrupt:
         s.close()
         print("\n++++++++++ Socket succesfully closed! ++++++++++")

@@ -17,6 +17,7 @@ class ConfigReader(object):
 
         self.left_arm = False
         self.right_arm = False
+        self.push_thresh = 0
 
         self.left_angles = {}
         self.right_angles = {}
@@ -33,6 +34,8 @@ class ConfigReader(object):
                                                     "left_arm")
             self.right_arm = self._config.getboolean("GENERAL",
                                                      "right_arm")
+            self.push_thresh = self._config.getint("GENERAL",
+                                                   "push_thresh")
         except ConfigParser.NoOptionError, err:
             print str(err)
             return False
@@ -70,6 +73,7 @@ def main():
     print c.right_angles
     print c.left_angles
     print c.left_arm
+    print c.push_thresh
 
 if __name__ == "__main__":
     main()

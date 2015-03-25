@@ -1,5 +1,6 @@
 import sys
 from copy import deepcopy
+import time
 
 import rospy
 import tf
@@ -21,8 +22,9 @@ from baxter_core_msgs.srv import (
 
 class ArmController(object):
 
-    def __init__(self, limb, starting_poss=None):
-        self.neutral_poss = starting_poss
+    def __init__(self, limb, starting_pos=None, push_thresh=30):
+        self.neutral_pos = starting_pos
+        self.push_thresh = push_thresh
         rospy.init_node("baxter_myo")
         rospy.Subscriber("myo_data", Twist, self.callback)
         rospy.loginfo("Subscribed to myo_data")
@@ -33,7 +35,6 @@ class ArmController(object):
         rospy.loginfo("Enabling Baxter...")
         self._rs = baxter_interface.RobotEnable(baxter_interface.CHECK_VERSION)
         self._rs.enable()
-        # self._tuck = baxter_tools.Tuck(False) # untucks
         # TODO add tucking
 
         self.received = False
@@ -46,25 +47,35 @@ class ArmController(object):
     def callback(self, data):
         self.received = True
         self.data = deepcopy(data)
-        rospy.loginfo(rospy.get_caller_id() + " heard: \
-        \n Linear [%f, %f, %f] \
-        \n Angular [%f, %f, %f]",
-                      self.data.linear.x, self.data.linear.y,
-                      self.data.linear.z, self.data.angular.x,
-                      self.data.angular.y, self.data.angular.z)
+        # rospy.loginfo(rospy.get_caller_id() + " heard: \
+        # \n Linear [%f, %f, %f] \
+        # \n Angular [%f, %f, %f]",
+        #               self.data.linear.x, self.data.linear.y,
+        #               self.data.linear.z, self.data.angular.x,
+        #               self.data.angular.y, self.data.angular.z)
 
     def move_to_neutral(self):
-        self.limb.move_to_joint_positions(self.starting_poss)
+        self.limb.move_to_joint_positions(self.neutral_pos)
 
     def set_offset(self):
         pose = self.limb.endpoint_pose()
-        eu = tf.transformations.euler_from_quaternion(pose['angular'])
+        eu = tf.transformations.euler_from_quaternion(pose['orientation'])
         self.baxter_off.linear.x = pose['position'][0]
         self.baxter_off.linear.y = pose['position'][1]
         self.baxter_off.linear.z = pose['position'][2]
         self.baxter_off.angular.x = eu[0]
         self.baxter_off.angular.y = eu[1]
         self.baxter_off.angular.z = eu[2]
+
+    def get_effort(self):
+        e = self.limb.joint_efforts()
+        s = sum([abs(e[i]) for i in e.keys()])
+        return s
+
+    def is_pushing(self):
+        e = self.get_effort()
+        return e > self.push_thresh
+
 
     def find_joint_position(self, pose, x_off=0.0, y_off=0.0, z_off=0.0):
         '''
@@ -114,8 +125,11 @@ class ArmController(object):
         hdr = Header(stamp=rospy.Time.now(), frame_id='base')
         pose_req = PoseStamped(header=hdr, pose=approach_pose)
         ik_request.pose_stamp.append(pose_req)
-        resp = iksvc(ik_request)
-        return dict(zip(resp.joints[0].name, resp.joints[0].position))
+        try:
+            resp = iksvc(ik_request)
+            return dict(zip(resp.joints[0].name, resp.joints[0].position))
+        except:
+            return None
 
     def move_loop(self):
         while not rospy.is_shutdown():
@@ -129,8 +143,11 @@ class ArmController(object):
                     targ_oy=float(self.data.angular.y),
                     targ_oz=float(self.data.angular.z))
                 rospy.loginfo("Position sent!")
-                self.limb.move_to_joint_positions(new_poss)
+                self.limb.move_to_joint_positions(new_poss, timeout=0.1)
                 self.received = False
+                if self.is_pushing():
+                    rospy.loginfo("PUSHING!!!")
+
 
 
 def main():
