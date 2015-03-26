@@ -17,8 +17,8 @@ class SocketListener(object):
         # ROS stuff first
         rospy.init_node("myo_socket_listener")
         self._pub = rospy.Publisher(topic, MyoData)
-        self.calibrated = False
-        self.enabled = False
+        self.calibrated = True
+        self.enabled = True
         self.gripper = False
         # networking stuff later
         self.host = host
@@ -51,19 +51,24 @@ class SocketListener(object):
         Returns empty Twist if s == ''
         """
         tw = Twist()
-        if len(s) > 0:
-            s = s[1:]
-            s = s[:-1]
-            data = s.split()
-            fs = []
-            for d in data:
-                fs.append(float(d))
-            tw.linear.x = fs[0]
-            tw.linear.y = fs[1]
-            tw.linear.z = fs[2]
-            tw.angular.x = fs[3]
-            tw.angular.y = fs[4]
-            tw.angular.z = fs[5]
+        if len(s) == 0:
+            return tw
+        if not s.endswith(";'"):
+            return tw
+        print s
+        s = s[1:]
+        s = s[:-2]
+        data = s.split()
+        fs = []
+        for d in data:
+            # print d
+            fs.append(float(d))
+        tw.linear.x = fs[0]
+        tw.linear.y = fs[1]
+        tw.linear.z = fs[2]
+        tw.angular.x = fs[3]
+        tw.angular.y = fs[4]
+        tw.angular.z = fs[5]
         return tw
 
     def prepare_data(self, s):
@@ -72,9 +77,9 @@ class SocketListener(object):
 
         if s == "calibrated":
             self.calibrated = True
-        elif s == "open_gripper":
+        elif s == "open gripper":
             self.gripper = False
-        elif s == "close_gripper":
+        elif s == "close gripper":
             self.gripper = True
         elif s == "enable":
             self.enabled = True

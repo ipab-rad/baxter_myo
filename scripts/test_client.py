@@ -40,7 +40,7 @@ while 1:
             o_z = random.uniform(-0.0, 0.0)
             # could just use joint, but *hack*
             st = "" + str(x) + " " + str(y) + " " + str(z) \
-                 +  " " + str(o_x) + " " + str(o_y) + " " + str(o_z)
+                 +  " " + str(o_x) + " " + str(o_y) + " " + str(o_z) + ";"
             print "Sending:", st
             s.sendall(st)
             data = s.recv(1024)
