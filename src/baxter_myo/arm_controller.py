@@ -1,6 +1,7 @@
 import sys
 from copy import deepcopy
 import time
+import math
 
 import rospy
 import tf
@@ -39,16 +40,19 @@ class ArmController(object):
             rospy.Subscriber("myo_data", MyoData, self.callback)
             rospy.loginfo("Subscribed to myo_data")
         else:
-            rospy.Subscriber("myo_data_start", MyoData, self.start_callback)
-            rospy.loginfo("Subscribed to myo_data_start")
-            rospy.Subscriber("myo_data_end", MyoData, self.end_callback)
-            rospy.loginfo("Subscribed to myo_data_start")
-            self.end_gripper_enabled = False
-            self.start_calibrated = False
-            self.end_calibrated = False
-            self.start_enabled = False
-            self.end_enabled = False
-
+            rospy.Subscriber("myo_data_high", MyoData, self.high_callback)
+            rospy.loginfo("Subscribed to myo_data_high")
+            rospy.Subscriber("myo_data_low", MyoData, self.low_callback)
+            rospy.loginfo("Subscribed to myo_data_low")
+            self.high_received = False
+            self.low_received = False
+            self.high_calibrated = True
+            self.low_calibrated = True
+            self.high_enabled = True
+            self.low_enabled = True
+            self.high_data = Twist()
+            self.low_data = Twist()
+            self.new_poss = deepcopy(self.neutral_pos)
 
         self.name_limb = limb
         self._limb = baxter_interface.Limb(self.name_limb)
@@ -73,18 +77,18 @@ class ArmController(object):
         self.enabled = data.enabled
         self.data = deepcopy(data.data)
 
-    def start_callback(self, data):
-        self.start_received = True
-        self.start_calibrated = data.calibrated
-        self.start_enabled = data.enabled
-        self.data = deepcopy(data.data)
+    def high_callback(self, data):
+        self.high_received = True
+        self.high_calibrated = data.calibrated
+        self.high_enabled = data.enabled
+        self.high_data = deepcopy(data.data)
 
-    def end_callback(self, data):
-        self.end_received = True
+    def low_callback(self, data):
+        self.low_received = True
         self.gripper_enabled = data.gripper
-        self.end_calibrated = data.calibrated
-        self.end_enabled = data.enabled
-        self.data = deepcopy(data.data)
+        self.low_calibrated = data.calibrated
+        self.low_enabled = data.enabled
+        self.low_data = deepcopy(data.data)
 
     def move_to_neutral(self):
         self._limb.move_to_joint_positions(self.neutral_pos)
@@ -106,6 +110,7 @@ class ArmController(object):
 
     def is_pushing(self):
         e = self.get_effort()
+        print "effort: " + str(e)
         return e > self.push_thresh
 
 
@@ -205,12 +210,12 @@ class ArmController(object):
             self._gripper.open()
 
     def step_angles(self):
-        if not self.enabled:
+        if not (self.high_enabled and self.low_enabled):
             return None
-        if not self.calibrated:
+        if not (self.high_calibrated and self.low_calibrated):
             rospy.loginfo("Moving to initial position")
             self.move_to_neutral()
-        elif self.start_received and self.end_received:
+        elif self.high_received or self.low_received:
             flag = self.set_angles()
             if not flag:
                 rospy.loginfo("Cannot move to this position!")
@@ -233,8 +238,24 @@ class ArmController(object):
         Set angles given data from two Myos.
         Returns True if angles can be set, otherwise returns False
         """
-        pass
+        limb_name = self.name_limb
+        if self.high_received:
+            e0 = math.radians(self.high_data.angular.x)
+            s1 = math.radians(self.high_data.angular.y)
+            s0 = math.radians(self.high_data.angular.z) 
+            self.new_poss[limb_name + '_e0'] = e0
+            self.new_poss[limb_name + '_s1'] = s1
+            self.new_poss[limb_name + '_s0'] = s0
 
+        if self.low_received:
+            w0 = math.radians(self.low_data.angular.x)
+            e1 = math.radians(self.low_data.angular.y)
+            w1 = math.radians(self.low_data.angular.z)
+            self.new_poss[limb_name + '_w0'] = w0
+            self.new_poss[limb_name + '_e1'] = e1
+            self.new_poss[limb_name + '_w1'] = w1
+        self._limb.move_to_joint_positions(self.new_poss, timeout=0.2)
+        return True
 
 def main():
     ac = ArmController('right')
