@@ -29,6 +29,7 @@ class ArmController(object):
         self.gripper_enabled = False
         self.calibrated = False
         self.enabled = False
+        self._closed_flag = True
         self.data = Twist()
 
         rospy.init_node("baxter_myo")
@@ -152,15 +153,22 @@ class ArmController(object):
                 targ_oy=float(self.data.angular.y),
                 targ_oz=float(self.data.angular.z))
             rospy.loginfo("Moving to new position")
-            self._limb.move_to_joint_positions(new_poss, timeout=0.2)
+            if new_poss is not None:
+                self._limb.move_to_joint_positions(new_poss, timeout=0.2)
+            else:
+                rospy.loginfo("Cannot move to this position!")
             self.received = False
             if self.is_pushing():
                 rospy.loginfo("PUSHING!")
         if self.gripper_enabled:
-            rospy.loginfo("Closing gripper")
+            if not self._closed_flag:
+                rospy.loginfo("Closing gripper")
+                self._closed_flag = True
             self._gripper.close()
         else:
-            rospy.loginfo("Opening gripper")
+            if self._closed_flag:
+                rospy.loginfo("Opening gripper")
+                self._closed_flag = False
             self._gripper.open()
 
 def main():
