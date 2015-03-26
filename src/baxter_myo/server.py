@@ -20,7 +20,7 @@ class SocketListener(object):
         self.calibrated = True
         self.enabled = True
         self.gripper = False
-        self.previous_l = 0
+        self.previous_l = 1000000
         # networking stuff later
         self.host = host
         self.port = port
@@ -44,9 +44,9 @@ class SocketListener(object):
             s = s[1:-1] # remove `'`s
             rospy.loginfo("Received: %s", s)
             l = s.split(';')
-            l = filter(None, l)
+            l = [x for x in l if x]
             for e in l:
-                msg = self.prepare_data(s)
+                msg = self.prepare_data(e)
                 self._pub.publish(msg)
                 self._conn.sendall(data)
         self._conn.close()
@@ -59,17 +59,10 @@ class SocketListener(object):
         tw = Twist()
         if len(s) == 0:
             return tw
-        if not s.endswith(";'"):
-            return tw
-        if len(s) >= self.previous_l * 1.5:
-            return tw
         self.previous_l = len(s)
-        s = s[1:]
-        s = s[:-2]
-        data = s.split()
+        data = s.split(" ")
         fs = []
         for d in data:
-            # print d
             fs.append(float(d))
         tw.linear.x = fs[0]
         tw.linear.y = fs[1]
@@ -83,15 +76,15 @@ class SocketListener(object):
         msg = MyoData()
         tw = self.prepare_twist('')
 
-        if s == "'calibrated;'":
+        if s == "calibrated":
             self.calibrated = True
-        elif s == "'open gripper;'":
+        elif s == "open gripper":
             self.gripper = False
-        elif s == "'close gripper;'":
+        elif s == "close gripper":
             self.gripper = True
-        elif s == "'enable;'":
+        elif s == "enable":
             self.enabled = True
-        elif s == "'disable;'":
+        elif s == "disable":
             self.enabled = False
         else:
             tw = self.prepare_twist(s)
