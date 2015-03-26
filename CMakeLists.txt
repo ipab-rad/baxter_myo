@@ -10,6 +10,7 @@ find_package(catkin
   baxter_core_msgs
   baxter_interface
   message_generation
+  cv_bridge
 )
 
 catkin_python_setup()
@@ -34,6 +35,7 @@ catkin_package(
   baxter_core_msgs
   baxter_interface
   message_runtime
+  cv_bridge
 )
 
 install(
