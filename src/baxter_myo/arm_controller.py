@@ -23,7 +23,8 @@ from baxter_myo.msg import MyoData
 
 class ArmController(object):
 
-    def __init__(self, limb, starting_pos=None, push_thresh=100):
+    def __init__(self, limb, starting_pos=None, push_thresh=100,
+                 mode='positions'):
         self.neutral_pos = starting_pos
         self.push_thresh = push_thresh
         self.gripper_enabled = False
@@ -31,10 +32,23 @@ class ArmController(object):
         self.enabled = False
         self._closed_flag = True
         self.data = Twist()
-
+        self.mode = mode
         rospy.init_node("baxter_myo")
-        rospy.Subscriber("myo_data", MyoData, self.callback)
-        rospy.loginfo("Subscribed to myo_data")
+
+        if self.mode == "positions":
+            rospy.Subscriber("myo_data", MyoData, self.callback)
+            rospy.loginfo("Subscribed to myo_data")
+        else:
+            rospy.Subscriber("myo_data_start", MyoData, self.start_callback)
+            rospy.loginfo("Subscribed to myo_data_start")
+            rospy.Subscriber("myo_data_end", MyoData, self.end_callback)
+            rospy.loginfo("Subscribed to myo_data_start")
+            self.end_gripper_enabled = False
+            self.start_calibrated = False
+            self.end_calibrated = False
+            self.start_enabled = False
+            self.end_enabled = False
+
 
         self.name_limb = limb
         self._limb = baxter_interface.Limb(self.name_limb)
@@ -57,7 +71,19 @@ class ArmController(object):
         self.gripper_enabled = data.gripper
         self.calibrated = data.calibrated
         self.enabled = data.enabled
+        self.data = deepcopy(data.data)
 
+    def start_callback(self, data):
+        self.start_received = True
+        self.start_calibrated = data.calibrated
+        self.start_enabled = data.enabled
+        self.data = deepcopy(data.data)
+
+    def end_callback(self, data):
+        self.end_received = True
+        self.gripper_enabled = data.gripper
+        self.end_calibrated = data.calibrated
+        self.end_enabled = data.enabled
         self.data = deepcopy(data.data)
 
     def move_to_neutral(self):
@@ -138,6 +164,12 @@ class ArmController(object):
             return None
 
     def step(self):
+        if self.mode == "positions":
+            self.step_pos()
+        else:
+            self.step_angles()
+
+    def step_pos(self):
         if not self.enabled:
             return None
         if not self.calibrated:
@@ -154,12 +186,13 @@ class ArmController(object):
                 targ_oz=float(self.data.angular.z))
             rospy.loginfo("Moving to new position")
             if new_poss is not None:
-                self._limb.move_to_joint_positions(new_poss, timeout=0.2)
+                self._limb.move_to_joint_positions(new_poss,
+                                                   timeout=0.2)
             else:
                 rospy.loginfo("Cannot move to this position!")
             self.received = False
-            if self.is_pushing():
-                rospy.loginfo("PUSHING!")
+        if self.is_pushing():
+            rospy.loginfo("PUSHING!")
         if self.gripper_enabled:
             if not self._closed_flag:
                 rospy.loginfo("Closing gripper")
@@ -170,6 +203,38 @@ class ArmController(object):
                 rospy.loginfo("Opening gripper")
                 self._closed_flag = False
             self._gripper.open()
+
+    def step_angles(self):
+        if not self.enabled:
+            return None
+        if not self.calibrated:
+            rospy.loginfo("Moving to initial position")
+            self.move_to_neutral()
+        elif self.start_received and self.end_received:
+            flag = self.set_angles()
+            if not flag:
+                rospy.loginfo("Cannot move to this position!")
+            self.received = False
+        if self.is_pushing():
+            rospy.loginfo("PUSHING!")
+        if self.gripper_enabled:
+            if not self._closed_flag:
+                rospy.loginfo("Closing gripper")
+                self._closed_flag = True
+            self._gripper.close()
+        else:
+            if self._closed_flag:
+                rospy.loginfo("Opening gripper")
+                self._closed_flag = False
+            self._gripper.open()
+
+    def set_angles(self):
+        """
+        Set angles given data from two Myos.
+        Returns True if angles can be set, otherwise returns False
+        """
+        pass
+
 
 def main():
     ac = ArmController('right')

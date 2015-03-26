@@ -32,7 +32,7 @@ def send_image():
 def main():
     c = ConfigReader("demo_config")
     c.parse_all()
-    s = ArmController('right', c.right_angles, c.push_thresh)
+    s = ArmController('right', c.right_angles, c.push_thresh, c.mode)
     send_image()
     while not rospy.is_shutdown():
         s.step()

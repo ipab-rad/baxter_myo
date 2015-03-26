@@ -20,6 +20,7 @@ class SocketListener(object):
         self.calibrated = True
         self.enabled = True
         self.gripper = False
+        self.previous_l = 0
         # networking stuff later
         self.host = host
         self.port = port
@@ -32,6 +33,7 @@ class SocketListener(object):
         self._socket.listen(1)
         self._conn, self.addr = self._socket.accept()
         rospy.loginfo("Connected by %s", self.addr)
+
 
     def loop(self):
         while 1:
@@ -55,7 +57,9 @@ class SocketListener(object):
             return tw
         if not s.endswith(";'"):
             return tw
-        print s
+        if len(s) >= self.previous_l * 1.5:
+            return tw
+        self.previous_l = len(s)
         s = s[1:]
         s = s[:-2]
         data = s.split()
@@ -75,15 +79,15 @@ class SocketListener(object):
         msg = MyoData()
         tw = self.prepare_twist('')
 
-        if s == "calibrated":
+        if s == "'calibrated;'":
             self.calibrated = True
-        elif s == "open gripper":
+        elif s == "'open gripper;'":
             self.gripper = False
-        elif s == "close gripper":
+        elif s == "'close gripper;'":
             self.gripper = True
-        elif s == "enable":
+        elif s == "'enable;'":
             self.enabled = True
-        elif s == "disable":
+        elif s == "'disable;'":
             self.enabled = False
         else:
             tw = self.prepare_twist(s)
