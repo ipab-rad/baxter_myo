@@ -41,10 +41,14 @@ class SocketListener(object):
             s = repr(data)
             if not data:
                 break
+            s = s[1:-1] # remove `'`s
             rospy.loginfo("Received: %s", s)
-            msg = self.prepare_data(s)
-            self._pub.publish(msg)
-            self._conn.sendall(data)
+            l = s.split(';')
+            l = filter(None, l)
+            for e in l:
+                msg = self.prepare_data(s)
+                self._pub.publish(msg)
+                self._conn.sendall(data)
         self._conn.close()
 
 

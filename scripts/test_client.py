@@ -17,15 +17,18 @@ def parse_doc():
     l = []
     rp = rospkg.RosPack()
     config_path = rp.get_path('baxter_myo') \
-                  + '/tests/' + 'poss.txt'
+                  + '/tests/' + 'angles.txt'
     f = open(config_path, 'r')
     for line in f:
         s = line.split(" ")
         if s[0] == "position":
-            x = eval(s[1])
-            y = eval(s[2])
-            z = eval(s[3])
-            l.append((x, y, z))
+            x = random.uniform(0.0, 0.0)
+            y = random.uniform(0.0, 0.0)
+            z = random.uniform(0.0, 0.0)
+            o_x = eval(s[1])
+            o_y = eval(s[2])
+            o_z = eval(s[3])
+            l.append((x, y, z, o_x, o_y, o_z))
     return l
 
 while 1:
@@ -35,9 +38,9 @@ while 1:
             x = e[0]
             y = e[1]
             z = e[2]
-            o_x = random.uniform(0.0, 0.0)
-            o_y = random.uniform(-0.0, -0.0)
-            o_z = random.uniform(-0.0, 0.0)
+            o_x = e[3]
+            o_y = e[4]
+            o_z = e[5]
             # could just use joint, but *hack*
             st = "" + str(x) + " " + str(y) + " " + str(z) \
                  +  " " + str(o_x) + " " + str(o_y) + " " + str(o_z) + ";"
