@@ -50,7 +50,7 @@ while 1:
                 print "Sending:", st
                 s.sendall(st)
                 data = s.recv(1024)
-                time.sleep(0.05)
+                time.sleep(0.02)
         break
     except KeyboardInterrupt:
         s.close()

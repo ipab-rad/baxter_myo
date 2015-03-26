@@ -110,7 +110,6 @@ class ArmController(object):
 
     def is_pushing(self):
         e = self.get_effort()
-        print "effort: " + str(e)
         return e > self.push_thresh
 
 
@@ -196,8 +195,8 @@ class ArmController(object):
             else:
                 rospy.loginfo("Cannot move to this position!")
             self.received = False
-        if self.is_pushing():
-            rospy.loginfo("PUSHING!")
+        if self._gripper.gripping():
+            rospy.loginfo("Gripping!")
         if self.gripper_enabled:
             if not self._closed_flag:
                 rospy.loginfo("Closing gripper")
@@ -220,8 +219,8 @@ class ArmController(object):
             if not flag:
                 rospy.loginfo("Cannot move to this position!")
             self.received = False
-        if self.is_pushing():
-            rospy.loginfo("PUSHING!")
+        if self._gripper.gripping():
+            rospy.loginfo("Gripping!")
         if self.gripper_enabled:
             if not self._closed_flag:
                 rospy.loginfo("Closing gripper")
@@ -242,8 +241,8 @@ class ArmController(object):
         if self.high_received:
             e0 = math.radians(self.high_data.angular.x)
             s1 = math.radians(self.high_data.angular.y)
-            s0 = math.radians(self.high_data.angular.z) 
-            self.new_poss[limb_name + '_e0'] = e0
+            s0 = math.radians(self.high_data.angular.z)
+            self.new_poss[limb_name + '_e0'] = -e0
             self.new_poss[limb_name + '_s1'] = s1
             self.new_poss[limb_name + '_s0'] = s0
 
@@ -251,10 +250,10 @@ class ArmController(object):
             w0 = math.radians(self.low_data.angular.x)
             e1 = math.radians(self.low_data.angular.y)
             w1 = math.radians(self.low_data.angular.z)
-            self.new_poss[limb_name + '_w0'] = w0
+            self.new_poss[limb_name + '_w0'] = -w0
             self.new_poss[limb_name + '_e1'] = e1
             self.new_poss[limb_name + '_w1'] = w1
-        self._limb.move_to_joint_positions(self.new_poss, timeout=0.2)
+        self._limb.move_to_joint_positions(self.new_poss, timeout=0.1)
         return True
 
 def main():
