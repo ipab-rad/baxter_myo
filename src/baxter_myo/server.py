@@ -23,8 +23,8 @@ class SocketListener(object):
         self.high_calibrated = False
         self.high_enabled = False
         self.high_gripper = False
-        self.low_calibrated = False
-        self.low_enabled = False
+        self.low_calibrated = True
+        self.low_enabled = True
         self.low_gripper = False
 
         # networking stuff later
@@ -40,7 +40,6 @@ class SocketListener(object):
         self._conn, self.addr = self._socket.accept()
         rospy.loginfo("Connected by %s", self.addr)
 
-
     def loop(self):
         while 1:
             data = self._conn.recv(1024)
@@ -49,15 +48,15 @@ class SocketListener(object):
                 break
             s = s[1:-1] # remove `'`s
             rospy.loginfo("Received: %s", s)
-            i = s.split(":")
-            l = i[1].split(';')
+            l = s.split(';')
             l = [x for x in l if x]
             for e in l:
+                i = e.split(":")
                 if i[0] == "0":
-                    msg = self.low_prepare_data(e)
+                    msg = self.low_prepare_data(i[1])
                     self._pub_low.publish(msg)
                 elif i[0] == "1":
-                    msg = self.high_prepare_data(e)
+                    msg = self.high_prepare_data(i[1])
                     self._pub_high.publish(msg)
                 self._conn.sendall(data)
         self._conn.close()
