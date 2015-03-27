@@ -35,7 +35,9 @@ def main():
     s = ArmController('right', c.right_angles, c.push_thresh, c.mode)
     send_image()
     while not rospy.is_shutdown():
+        print "step"
         s.step()
+        time.sleep(0.5)
 
 if __name__ == "__main__":
     main()

@@ -2,7 +2,7 @@
 left_arm = False
 right_arm = True
 push_thresh = 28
-mode = angles
+mode = positions
 
 [STARTING_POSE]
 left = {'left_e0': 0.017640779040527344, 'left_e1': 1.5416506900634768, 'left_s0': -0.8049564175231935, 'left_s1': 0.04525243319091797, 'left_w0': -0.004601942358398438, 'left_w1': -1.570796325, 'left_w2': -0.06212622183837891}

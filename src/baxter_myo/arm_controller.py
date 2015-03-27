@@ -29,9 +29,10 @@ class ArmController(object):
         self.neutral_pos = starting_pos
         self.push_thresh = push_thresh
         self.gripper_enabled = False
-        self.calibrated = False
-        self.enabled = False
+        self.calibrated = True
+        self.enabled = True
         self._closed_flag = True
+        self.rgbd = True
         self.data = Twist()
         self.mode = mode
         rospy.init_node("baxter_myo")
@@ -39,6 +40,14 @@ class ArmController(object):
         if self.mode == "positions":
             rospy.Subscriber("myo_data", MyoData, self.callback)
             rospy.loginfo("Subscribed to myo_data")
+            self.listener = tf.TransformListener()
+            if self.rgbd:
+                s = raw_input("Calibrated: ")
+                if s == "y":
+                    (trans,rot) = self.listener.lookupTransform('/openni_link', '/left_hand_1', rospy.Time(0))
+                else:
+                    return
+            self.initial_pos = trans
         else:
             rospy.Subscriber("myo_data_high", MyoData, self.high_callback)
             rospy.loginfo("Subscribed to myo_data_high")
@@ -63,7 +72,7 @@ class ArmController(object):
         self._gripper.calibrate()
         # TODO add tucking
 
-        self.received = False
+        self.received = True
         self.baxter_off = Twist()
         rospy.loginfo("Moving to neutral position")
         self.move_to_neutral()
@@ -169,22 +178,38 @@ class ArmController(object):
 
     def step(self):
         if self.mode == "positions":
+            print "Doing position!"
             self.step_pos()
         else:
             self.step_angles()
 
     def step_pos(self):
+        print "WAAAAT"
         if not self.enabled:
+            print 1
             return None
         if not self.calibrated:
+            print 3
             rospy.loginfo("Moving to initial position")
             self.move_to_neutral()
         elif self.received:
+            print 2
+            offset = self.calculate_pose()
+            print offset
+            if self.rgbd:
+                ofx = offset[0]
+                ofy = offset[1]
+                ofz = offset[2]
+            else:
+                ofx=float(self.data.linear.x)
+                ofy=float(self.data.linear.y)
+                ofz=float(self.data.linear.z)
+
             new_poss = self.find_joint_pose(
                 self._limb.endpoint_pose(),
-                targ_x=float(self.data.linear.x),
-                targ_y=float(self.data.linear.y),
-                targ_z=float(self.data.linear.z),
+                targ_x=ofx,
+                targ_y=ofy,
+                targ_z=ofz,
                 targ_ox=float(self.data.angular.x),
                 targ_oy=float(self.data.angular.y),
                 targ_oz=float(self.data.angular.z))
@@ -194,7 +219,7 @@ class ArmController(object):
                                                    timeout=0.2)
             else:
                 rospy.loginfo("Cannot move to this position!")
-            self.received = False
+            self.received = True
         if self._gripper.gripping():
             rospy.loginfo("Gripping!")
         if self.gripper_enabled:
@@ -207,6 +232,16 @@ class ArmController(object):
                 rospy.loginfo("Opening gripper")
                 self._closed_flag = False
             self._gripper.open()
+
+    def calculate_pose(self):
+            try:
+                (trans,rot) = self.listener.lookupTransform('/openni_link', '/left_hand_1', rospy.Time(0))
+            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+                return [0, 0, 0]
+            offset_pos = [x - y for (x, y) in zip(self.initial_pos, trans)]
+            self.initial_pos = offset_pos
+            return offset_pos
+
 
     def step_angles(self):
         if not (self.high_enabled and self.low_enabled):
