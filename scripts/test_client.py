@@ -38,6 +38,7 @@ while 1:
         print l
         while 1:
             for e in l:
+                i = str(random.randint(0, 1))
                 x = e[0]
                 y = e[1]
                 z = e[2]
@@ -45,7 +46,7 @@ while 1:
                 o_y = e[4]
                 o_z = e[5]
                 # could just use joint, but *hack*
-                st = "" + str(x) + " " + str(y) + " " + str(z) \
+                st = i + ":" + str(x) + " " + str(y) + " " + str(z) \
                      +  " " + str(o_x) + " " + str(o_y) + " " + str(o_z) + ";"
                 print "Sending:", st
                 s.sendall(st)
