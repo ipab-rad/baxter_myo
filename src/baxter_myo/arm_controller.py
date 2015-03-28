@@ -29,22 +29,22 @@ class ArmController(object):
         self.neutral_pos = starting_pos
         self.push_thresh = push_thresh
         self.gripper_enabled = False
-        self.calibrated = True
-        self.enabled = True
-        self._closed_gripper = True
-        self.rgbd = True # todo
+        self.calibrated = False
+        self.enabled = False
+        self._closed_gripper = False
+        self.rgbd = True
         self.data = Twist()
         self.mode = mode
         rospy.init_node("baxter_myo")
 
         if self.mode == "positions":
-            rospy.Subscriber("myo_data", MyoData, self.callback)
+            rospy.Subscriber("myo_data_low", MyoData, self.callback)
             rospy.loginfo("Subscribed to myo_data")
             self.listener = tf.TransformListener()
             if self.rgbd:
                 s = raw_input("Calibrated: ")
                 if s == "y":
-                    (trans,rot) = self.listener.lookupTransform('/openni_link', '/left_hand_1', rospy.Time(0))
+                    (trans,rot) = self.listener.lookupTransform('/openni_link', '/left_hand_4', rospy.Time(0))
                     print "Recording: " + str(trans)
                     self.initial_pos = trans
                     self.previous_pos = [0,0,0]
@@ -91,8 +91,8 @@ class ArmController(object):
 
     def high_callback(self, data):
         self.high_received = True
-        # self.high_calibrated = data.calibrated
-        # self.high_enabled = data.enabled TODO
+        self.high_calibrated = data.calibrated
+        self.high_enabled = data.enabled
         self.high_data = deepcopy(data.data)
 
     def low_callback(self, data):
@@ -189,6 +189,8 @@ class ArmController(object):
     def step_pos(self):
         if not self.enabled:
             print "Not enabled!"
+            self.move_to_neutral()
+            time.sleep(1)
             return None
         if not self.calibrated:
             print "Not calibrated!"
@@ -205,19 +207,23 @@ class ArmController(object):
                 ofx=float(self.data.linear.x)
                 ofy=float(self.data.linear.y)
                 ofz=float(self.data.linear.z)
+            print (ofx, ofy, ofz)
 
+
+            offset = self.calculate_orient()
             new_poss = self.find_joint_pose(
                 self._limb.endpoint_pose(),
                 targ_x=ofx,
                 targ_y=ofy,
                 targ_z=ofz,
-                targ_ox=float(self.data.angular.x),
-                targ_oy=float(self.data.angular.y),
-                targ_oz=float(self.data.angular.z))
+                targ_ox=offset[0],
+                targ_oy=offset[1],
+                targ_oz=offset[2])
             rospy.loginfo("Moving to new position")
-            if new_poss is not None:
+            print new_poss
+            if not (new_poss == {}):
                 self._limb.move_to_joint_positions(new_poss,
-                                                   timeout=0.1)
+                                                   timeout=0.4)
             else:
                 rospy.loginfo("Cannot move to this position!")
             self.received = True
@@ -236,7 +242,7 @@ class ArmController(object):
 
     def calculate_pose(self):
             try:
-                (trans,rot) = self.listener.lookupTransform('/openni_link', '/left_hand_1', rospy.Time(0))
+                (trans,rot) = self.listener.lookupTransform('/openni_link', '/left_hand_4', rospy.Time(0))
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 return [0, 0, 0]
             # print "Initial pos: " + str(self.initial_pos)
@@ -261,11 +267,36 @@ class ArmController(object):
             diff = [x - y for (x, y) in d]
             # print "Previous pos: " + str(c_0)
             diff[2] = -diff[2]
-            # print "Differential: " + str(diff)
+            print "Differential: " + str(diff)
             # raw_input("Press enter")
             # self.previous_pos = rgbd_diff
+            print "DIFF POS: " + str(diff)
             return diff
 
+
+    def calculate_orient(self):
+
+            # CALC C_0
+            # c_0 = self.limb.endpoint_pose() - self.initial_end_pose
+            c_0 = []
+            co = tf.transformations.euler_from_quaternion(
+                self._limb.endpoint_pose()['orientation']
+            )
+            so = self.baxter_off.angular
+            print co
+            print so
+            c_0.append(co[0] - so.x)
+            c_0.append(co[1] - so.y)
+            c_0.append(co[2] - so.z)
+
+            l = [self.data.angular.x,
+                 self.data.angular.y,
+                 self.data.angular.z]
+            diff = []
+            diff.append(l[0] - c_0[0])
+            diff.append(l[1] - c_0[1])
+            diff.append(l[2] - c_0[2])
+            return diff
 
     def step_angles(self):
         if not (self.high_enabled and self.low_enabled):

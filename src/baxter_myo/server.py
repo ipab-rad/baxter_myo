@@ -42,23 +42,26 @@ class SocketListener(object):
 
     def loop(self):
         while 1:
-            data = self._conn.recv(1024)
-            s = repr(data)
-            if not data:
-                break
-            s = s[1:-1] # remove `'`s
-            rospy.loginfo("Received: %s", s)
-            l = s.split(';')
-            l = [x for x in l if x]
-            for e in l:
-                i = e.split(":")
-                if i[0] == "0":
-                    msg = self.low_prepare_data(i[1])
-                    self._pub_low.publish(msg)
-                elif i[0] == "1":
-                    msg = self.high_prepare_data(i[1])
-                    self._pub_high.publish(msg)
-                self._conn.sendall(data)
+            try:
+                data = self._conn.recv(1024)
+                s = repr(data)
+                if not data:
+                    break
+                s = s[1:-1] # remove `'`s
+                rospy.loginfo("Received: %s", s)
+                l = s.split(';')
+                l = [x for x in l if x]
+                for e in l:
+                    i = e.split(":")
+                    if i[0] == "0":
+                        msg = self.low_prepare_data(i[1])
+                        self._pub_low.publish(msg)
+                    elif i[0] == "1":
+                        msg = self.high_prepare_data(i[1])
+                        self._pub_high.publish(msg)
+                    self._conn.sendall(data)
+            except:
+                continue
         self._conn.close()
 
 
