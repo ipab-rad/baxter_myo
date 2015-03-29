@@ -28,8 +28,8 @@ def send_image():
         pub.publish(msg)
         rospy.sleep(1)
 
-
 def main():
+    rospy.init_node("baxter_myo")
     c = ConfigReader("demo_config")
     c.parse_all()
     s = ArmController('right', c.right_angles, c.push_thresh, c.mode)
