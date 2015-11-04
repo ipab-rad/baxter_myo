@@ -1,7 +1,7 @@
 from math import max
 
 import rospy
-from baxter_interface import Limb
+from baxter_interface import Limb, Gripper, CHECK_VERSION
 
 from baxter_myo.pose_generator import PoseGenerator
 
@@ -15,7 +15,12 @@ class ArmController(object):
         position.
         """
         self.limb_name = limb_name
+        rospy.loginfo("Creating interface and calibrating gripper")
         self._limb = Limb(self.limb_name)
+        self._gripper = Gripper(self.limb_name, CHECK_VERSION)
+        self._gripper.calibrate()
+        self._is_gripper_closed = False
+
         self._neutral_pos = starting_pos
         self._mode = mode
         rospy.loginfo("Moving to neutral position")
@@ -37,11 +42,26 @@ class ArmController(object):
         max_effort = max([abs(e[i]) for i in e.keys()])
         return max_effort > self.push_thresh
 
+    def _command_gripper(self):
+        """
+        Reads state from Myo and opens/closes gripper as needed.
+        """
+        if self._gripper.moving():
+            return
+        if self._is_gripper_closed:
+            self._gripper.open()
+        else:
+            self._gripper.close()
+        self._is_gripper_closed = not self._is_gripper_closed
+
     def step(self):
         """
         Executes a step of the main routine.
         """
-        pos = self._pg.gen_next()
+        self._command_gripper()
+
+        pos = self._pg.generate_pose()
+
         if pos is not None:
             rospy.loginfo("Moving to position %s", pos)
             self._limb.move_to_joint_positions(pos, timeout=0.2)
