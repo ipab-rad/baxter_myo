@@ -3,9 +3,8 @@ Use the Myo armband to control a Baxter robot.
 
 # Usage
 
-* `rosrun baxter_myo start_server.py`
-* `rosrun baxter_myo test_client.py` *OPTIONAL*
-* `rosrun baxter_myo move_baxter.py`
+* `rosrun baxter_myo start_baxter.py`
+
 # Installation
 
 * Move `tools/baxter_setup.sh` in your workspace home. Make sure to

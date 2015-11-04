@@ -3,6 +3,7 @@ import ConfigParser
 
 import rospkg
 
+
 class ConfigReader(object):
 
     def __init__(self, file):
@@ -10,8 +11,8 @@ class ConfigReader(object):
         `file`: string
         """
         self._rp = rospkg.RosPack()
-        self._config_path = self._rp.get_path('baxter_myo') \
-                            + '/config/' + file
+        self._config_path = (self._rp.get_path('baxter_myo')
+                             + '/config/' + file)
         self._config = ConfigParser.ConfigParser()
         self._config.read(self._config_path)
 
@@ -68,15 +69,3 @@ class ConfigReader(object):
         if not all(results):
             print "Error while parsing. Exiting!"
             sys.exit(1)
-
-
-def main():
-    c = ConfigReader("demo_config")
-    c.parse_all()
-    print c.right_angles
-    print c.left_angles
-    print c.left_arm
-    print c.push_thresh
-
-if __name__ == "__main__":
-    main()
