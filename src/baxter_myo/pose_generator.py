@@ -45,4 +45,4 @@ class PoseGenerator(object):
         Given new data and position of the arm, calculate new
         joint positions.
         """
-        raise(NotImplementedError)
+        return None

@@ -1,6 +1,5 @@
-from math import max
-
 import rospy
+from std_msgs.msg import String
 from baxter_interface import Limb, Gripper, CHECK_VERSION
 
 from baxter_myo.pose_generator import PoseGenerator
@@ -29,6 +28,10 @@ class ArmController(object):
         self._pg = PoseGenerator(self.limb_name,
                                  self._mode,
                                  self._limb.endpoint_pose())
+
+        self._sub_gesture = rospy.Subscriber("/myo_0/gesture", String,
+                                             self._gesture_callback)
+        self._last_data = None
 
     def move_to_neutral(self):
         self._limb.move_to_joint_positions(self._neutral_pos)
@@ -60,13 +63,16 @@ class ArmController(object):
         """
         self._command_gripper()
 
-        pos = self._pg.generate_pose()
+        pos = self._pg.generate_pose(self._last_data)
 
         if pos is not None:
             rospy.loginfo("Moving to position %s", pos)
             self._limb.move_to_joint_positions(pos, timeout=0.2)
         else:
             rospy.logwarn("Generated position is invalid")
+
+    def _gesture_callback(self, data):
+        self._is_gripper_closed = (data is "Fist")
 
 
 def main():
