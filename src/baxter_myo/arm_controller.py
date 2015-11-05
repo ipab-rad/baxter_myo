@@ -18,7 +18,7 @@ class ArmController(object):
         self._limb = Limb(self.limb_name)
         self._gripper = Gripper(self.limb_name, CHECK_VERSION)
         self._gripper.calibrate()
-        self._is_gripper_closed = False
+        self._is_fist_closed = False
 
         self._neutral_pos = starting_pos
         self._mode = mode
@@ -51,28 +51,33 @@ class ArmController(object):
         """
         if self._gripper.moving():
             return
-        if self._is_gripper_closed:
-            self._gripper.open()
-        else:
+
+        if self._is_fist_closed:
             self._gripper.close()
-        self._is_gripper_closed = not self._is_gripper_closed
+        else:
+            self._gripper.open()
 
     def step(self):
         """
         Executes a step of the main routine.
+        Fist checks the status of the gripper and
         """
+
         self._command_gripper()
 
-        pos = self._pg.generate_pose(self._last_data)
+        pos = self._pg.generate_pose()
 
         if pos is not None:
             rospy.loginfo("Moving to position %s", pos)
-            self._limb.move_to_joint_positions(pos, timeout=0.2)
+            if not self.is_pushing():
+                self._limb.move_to_joint_positions(pos, timeout=0.2)
+            else:
+                rospy.logwarn("Arm is being pushed!")
         else:
             rospy.logwarn("Generated position is invalid")
 
     def _gesture_callback(self, data):
-        self._is_gripper_closed = (data is "Fist")
+        self._is_fist_closed = (data is "Fist")
 
 
 def main():
