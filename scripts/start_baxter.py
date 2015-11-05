@@ -2,7 +2,7 @@
 import time
 import rospy
 import cv_bridge
-import cv
+import cv2
 import rospkg
 
 from baxter_myo.arm_controller import ArmController
@@ -22,14 +22,14 @@ def send_image():
         rp = rospkg.RosPack()
         path = rp.get_path('baxter_myo') \
                + '/share/' + 'good_face.jpg'
-        img = cv.LoadImage(path)
-        msg = cv_bridge.CvBridge().cv_to_imgmsg(img, encoding="bgr8")
-        pub = rospy.Publisher('/robot/xdisplay', Image, latch=True)
+        img = cv2.imread(path)
+        msg = cv_bridge.CvBridge().cv2_to_imgmsg(img, encoding="bgr8")
+        pub = rospy.Publisher('/robot/xdisplay', Image, latch=True, queue_size=10)
         pub.publish(msg)
         rospy.sleep(1)
 
 def main():
-    rospy.init_node("baxter_myo")
+    rospy.init_node("baxter_myo_controller")
     c = ConfigReader("demo_config")
     c.parse_all()
     s = ArmController('right', c.right_angles, c.push_thresh, c.mode)
