@@ -9,6 +9,7 @@ import cv
 import rospkg
 
 from geometry_msgs.msg import Vector3
+from std_msgs.msg import String
 
 
 class DataTester(object):
@@ -23,6 +24,9 @@ class DataTester(object):
         self._pub_ori = rospy.Publisher(self._myo_name + "/orientation",
                                         Vector3,
                                         queue_size=10)
+        self._pub_gesture = rospy.Publisher(self._myo_name + "/gesture",
+                                            String,
+                                            queue_size=10)
         self.prt_counter = 0
 
     def publish(self):
@@ -40,6 +44,7 @@ class DataTester(object):
         msg = Vector3(0, 0, 0)
         self._pub_pos.publish(msg)
         self._pub_ori.publish(msg)
+        self._pub_gesture.publish("Open")
         self._print_dot()
 
 
@@ -50,12 +55,13 @@ class DataTester(object):
         msg.z = random.randint(-180, 180) #rotation around z (yaw)
         self._pub_pos.publish(msg)
         self._pub_ori.publish(msg)
+        self._pub_gesture.publish("Fist")
         self._print_dot()
 
     def _print_dot(self):
 
         self.prt_counter += 1
-        if self.prt_counter > 50:
+        if self.prt_counter > 30:
             print "."
             self.prt_counter = 0
         else:
@@ -63,7 +69,7 @@ class DataTester(object):
             sys.stdout.flush()
 
 def main():
-    dt = DataTester(0, mode="random")
+    dt = DataTester(0, mode="zero")
     r = rospy.Rate(10)
     while not rospy.is_shutdown():
         dt.publish()
