@@ -49,6 +49,10 @@ class ArmController(object):
         """
         Reads state from Myo and opens/closes gripper as needed.
         """
+
+        if not self._gripper.ready():
+            return
+
         if self._gripper.moving():
             return
 
