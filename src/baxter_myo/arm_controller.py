@@ -1,3 +1,5 @@
+import sys
+
 import rospy
 from std_msgs.msg import String
 from baxter_interface import Limb, Gripper, CHECK_VERSION
@@ -13,6 +15,7 @@ class ArmController(object):
         Initialises parameters and moves the arm to a neutral
         position.
         """
+        self.push_thresh = push_thresh
         self.limb_name = limb_name
         rospy.loginfo("Creating interface and calibrating gripper")
         self._limb = Limb(self.limb_name)
@@ -20,18 +23,21 @@ class ArmController(object):
         self._gripper.calibrate()
         self._is_fist_closed = False
 
+
         self._neutral_pos = starting_pos
         self._mode = mode
         rospy.loginfo("Moving to neutral position")
         self.move_to_neutral()
         rospy.loginfo("Initialising PoseGenerator")
         self._pg = PoseGenerator(self.limb_name,
-                                 self._mode,
-                                 self._limb.endpoint_pose())
-
+                                 self._mode)
         self._sub_gesture = rospy.Subscriber("/myo_0/gesture", String,
                                              self._gesture_callback)
         self._last_data = None
+
+        self._pg.calibrate()
+
+
 
     def move_to_neutral(self):
         self._limb.move_to_joint_positions(self._neutral_pos)
@@ -72,9 +78,8 @@ class ArmController(object):
         pos = self._pg.generate_pose()
 
         if pos is not None:
-            rospy.loginfo("Moving to position %s", pos)
             if not self.is_pushing():
-                self._limb.move_to_joint_positions(pos, timeout=0.2)
+                self._limb.set_joint_positions(pos)
             else:
                 rospy.logwarn("Arm is being pushed!")
         else:
