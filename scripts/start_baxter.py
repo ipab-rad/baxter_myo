@@ -30,9 +30,9 @@ def send_image():
 
 def main():
     rospy.init_node("baxter_myo_controller")
-    c = ConfigReader("demo_config")
+    c = ConfigReader("one_arm_extended")
     c.parse_all()
-    s = ArmController('right', c.right_angles, c.push_thresh, c.mode)
+    s = ArmController((c.right_angles, c.left_angles), c.push_thresh, c.mode, c.arm_mode)
     send_image()
     while not rospy.is_shutdown():
         s.step()
