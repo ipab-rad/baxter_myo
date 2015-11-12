@@ -20,6 +20,7 @@ class ConfigReader(object):
         self.right_arm = False
         self.push_thresh = 0
         self.mode = ""
+        self.arm_mode = ""
 
         self.left_angles = {}
         self.right_angles = {}
@@ -40,6 +41,8 @@ class ConfigReader(object):
                                                    "push_thresh")
             self.mode = self._config.get("GENERAL",
                                          "mode")
+            self.arm_mode = self._config.get("GENERAL",
+                                             "arm_mode")
         except ConfigParser.NoOptionError, err:
             print str(err)
             return False
