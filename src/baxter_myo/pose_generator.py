@@ -24,16 +24,16 @@ class PoseGenerator(object):
         self._last_data_1 = (Vector3(), Vector3())
         self._calib_data_0 = (Vector3(), Vector3())
         self._calib_data_1 = (Vector3(), Vector3())
-        self._sub_ori_0 = rospy.Subscriber("/myo_0/orientation",
+        self._sub_ori_0 = rospy.Subscriber("/low_myo/imu_rpy",
                                            Vector3,
                                            self._orientation_callback_0)
-        self._sub_pos_0 = rospy.Subscriber("/myo_0/position",
+        self._sub_pos_0 = rospy.Subscriber("/low_myo/imu_pos",
                                            Vector3,
                                            self._position_callback_0)
-        self._sub_ori_1 = rospy.Subscriber("/myo_1/orientation",
+        self._sub_ori_1 = rospy.Subscriber("/top_myo/imu_rpy",
                                            Vector3,
                                            self._orientation_callback_1)
-        self._sub_pos_1 = rospy.Subscriber("/myo_1/position",
+        self._sub_pos_1 = rospy.Subscriber("/top_myo/imu_pos",
                                            Vector3,
                                            self._position_callback_1)
 
@@ -91,44 +91,86 @@ class PoseGenerator(object):
             raise ValueError("Mode %s is invalid!" % self.mode)
 
     def one_arm_generate_pose(self):
-        rospy.loginfo("Generating pose")
+        rospy.logdebug("Generating pose")
 
         data_0 = deepcopy(self._last_data_0[0])
         data_1 = deepcopy(self._last_data_1[0])
         this_pose = deepcopy(self._right_calib_pose)
 
         if self.arm_mode == "first":
-            if self._is_vector_valid(data_0):
-                change_0 = Vector3()
-                change_0.x = data_0.x - self._calib_data_0[0].x
-                change_0.y = data_0.y - self._calib_data_0[0].y
-                change_0.z = data_0.z - self._calib_data_0[0].z
-                print "MYO_0 (Forearm)"
-                print "PITCH: ", change_0.y
-                if (self._is_over_step(change_0.y)):
-                    this_pose["right_w1"] += radians(-1 * change_0.y)
-                print "YAW: ", change_0.z
-                if (self._is_over_step(change_0.z)):
-                    this_pose["right_w0"] += radians(-1 * change_0.z)
-                print "ROLL: ", change_0.x
-                if (self._is_over_step(change_0.x)):
-                    this_pose["right_w2"] += radians(-1 * change_0.x)
-
             if self._is_vector_valid(data_1):
                 change_1 = Vector3()
                 change_1.x = data_1.x - self._calib_data_1[0].x
                 change_1.y = data_1.y - self._calib_data_1[0].y
                 change_1.z = data_1.z - self._calib_data_1[0].z
-                print "MYO_1 (Upper arm)"
-                print "PITCH: ", change_1.y
-                if (self._is_over_step(change_1.y)):
-                    this_pose["right_e1"] += radians(change_1.y)
-                print "YAW: ", change_1.z
+                if (change_1.x < -179):
+                    change_1.x += 360
+                if (change_1.y < -179):
+                    change_1.y += 360
+                if (change_1.z < -179):
+                    change_1.z += 360
+                if (change_1.x > 179):
+                    change_1.x -= 360
+                if (change_1.y > 179):
+                    change_1.y -= 360
+                if (change_1.z > 179):
+                    change_1.z -= 360
+                # print "MYO_1 (Upper arm)"
+                rospy.logdebug("Data_1.x %f" % data_1.x)
+                rospy.logdebug("CalibData_1.x %f" % self._calib_data_1[0].x)
+                rospy.logdebug("Data_1.y %f" % data_1.y)
+                rospy.logdebug("CalibData_1.y %f" % self._calib_data_1[0].y)
+                rospy.logdebug("Data_1.z %f" % data_1.z)
+                rospy.logdebug("CalibData_1.z %f" % self._calib_data_1[0].z)
+                # print "ROLL: ", change_1.z
                 if (self._is_over_step(change_1.z)):
-                    this_pose["right_e0"] += radians(change_1.z)
-                print "ROLL: ", change_1.x
+                    this_pose["right_e0"] += radians(-1 * change_1.z)
+                # print "PITCH: ", change_1.y
+                if (self._is_over_step(change_1.y)):
+                    # this_pose["right_e1"] += radians(-1 * change_1.y)
+                    this_pose["right_s1"] += radians(1 * change_1.y)
+                # print "YAW: ", change_1.x
                 if (self._is_over_step(change_1.x)):
-                    this_pose["right_s0"] += radians(change_1.x)
+                    this_pose["right_s0"] += radians(-1 * change_1.x)
+
+            if self._is_vector_valid(data_0):
+                change_0 = Vector3()
+                change_0.x = data_0.x - self._calib_data_0[0].x - change_1.x
+                change_0.y = data_0.y - self._calib_data_0[0].y - change_1.y
+                change_0.z = data_0.z - self._calib_data_0[0].z - change_1.z
+                if (change_0.x < -179):
+                    change_0.x += 360
+                if (change_0.y < -179):
+                    change_0.y += 360
+                if (change_0.z < -179):
+                    change_0.z += 360
+                if (change_0.x > 179):
+                    change_0.x -= 360
+                if (change_0.y > 179):
+                    change_0.y -= 360
+                if (change_0.z > 179):
+                    change_0.z -= 360
+                # print "MYO_0 (Forearm)"
+                rospy.logdebug("Data_0.x %f" % data_0.x)
+                rospy.logdebug("CalibData_0.x %f" % self._calib_data_0[0].x)
+                rospy.logdebug("Data_0.y %f" % data_0.y)
+                rospy.logdebug("CalibData_0.y %f" % self._calib_data_0[0].y)
+                rospy.logdebug("Data_0.z %f" % data_0.z)
+                rospy.logdebug("CalibData_0.z %f" % self._calib_data_0[0].z)
+                # print "ROLL: ", change_0.z
+                if (self._is_over_step(change_0.z)):
+                    this_pose["right_w0"] += radians(-1 * change_0.z)
+                    # this_pose["right_w0"] += radians(1 * change_0.z)
+                # print "PITCH: ", change_0.y
+                if (self._is_over_step(change_0.y)):
+                    # this_pose["right_w1"] += radians(-1 * change_0.y)
+                    # this_pose["right_w1"] += radians(-1 * change_0.y)
+                    this_pose["right_w1"] += radians(1 * change_0.y)
+                # print "YAW: ", change_0.x
+                if (self._is_over_step(change_0.x)):
+                    # this_pose["right_w2"] += radians(-1 * change_0.x)
+                    # this_pose["right_w2"] += radians(1 * change_0.x)
+                    this_pose["right_e1"] += radians(-1 * change_0.x)
 
         elif self.arm_mode == "second":
             print "SECOND!"
@@ -140,15 +182,15 @@ class PoseGenerator(object):
                 change_1.y = data_1.y - self._calib_data_1[0].y
                 change_1.z = data_1.z - self._calib_data_1[0].z
                 print "MYO_1 (Upper arm)"
+                print "ROLL: ", change_1.x
+                if (self._is_over_step(change_1.x)):
+                    this_pose["right_e0"] += radians(change_1.x)
                 print "PITCH: ", data_1.y
                 if (self._is_over_step(change_1.y)):
                     this_pose["right_s1"] += radians(-1 * change_1.y)
                 print "YAW: ", change_1.z
                 if (self._is_over_step(change_1.z)):
                     this_pose["right_s0"] += radians(change_1.z)
-                print "ROLL: ", change_1.x
-                if (self._is_over_step(change_1.x)):
-                    this_pose["right_e0"] += radians(change_1.x)
             if self._is_vector_valid(data_0):
                 change_0 = Vector3()
                 change_0.x = data_0.x - self._calib_data_0[0].x
@@ -156,20 +198,20 @@ class PoseGenerator(object):
                 change_0.z = data_0.z - self._calib_data_0[0].z
                 print "MYO_0 (Forearm)"
                 print "PITCH: ", data_0.y
+                print "ROLL: ", data_0.x
+                if (self._is_over_step(change_0.x)):
+                    this_pose["right_w2"] += radians(-1 * change_0.x)
                 if (self._is_over_step(change_0.y)):
                     change_0.y += change_1.y
                     this_pose["right_e1"] += radians(-1 * change_0.y)
                 print "YAW: ", data_0.z
                 if (self._is_over_step(change_0.z)):
                     this_pose["right_w1"] += radians(change_0.z)
-                print "ROLL: ", data_0.x
-                if (self._is_over_step(change_0.x)):
-                    this_pose["right_w2"] += radians(-1 * change_0.x)
 
         return this_pose
 
     def two_arms_generate_pose(self):
-        rospy.loginfo("Generating pose")
+        rospy.logdebug("Generating pose")
 
         data_0 = deepcopy(self._last_data_0[0])
         data_1 = deepcopy(self._last_data_1[0])

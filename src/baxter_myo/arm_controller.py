@@ -1,7 +1,7 @@
 import sys, os
 
 import rospy
-from std_msgs.msg import String
+from std_msgs.msg import String, UInt8
 from baxter_interface import Limb, Gripper, CHECK_VERSION
 
 from baxter_myo.pose_generator import PoseGenerator
@@ -35,9 +35,9 @@ class ArmController(object):
         self.move_to_neutral()
         rospy.loginfo("Initialising PoseGenerator")
         self._pg = PoseGenerator(self._mode, self._arm_mode)
-        self._sub_right_gesture = rospy.Subscriber("/myo_0/gesture", String,
+        self._sub_right_gesture = rospy.Subscriber("/low_myo/gesture", UInt8,
                                                    self._right_gesture_callback)
-        self._sub_left_gesture = rospy.Subscriber("/myo_1/gesture", String,
+        self._sub_left_gesture = rospy.Subscriber("/top_myo/gesture", UInt8,
                                                   self._left_gesture_callback)
         self._last_data = None
         self._pg.calibrate()
@@ -142,10 +142,10 @@ class ArmController(object):
             rospy.logwarn("Generated position is invalid")
 
     def _right_gesture_callback(self, data):
-        self._is_right_fist_closed = (data is "Fist")
+        self._is_right_fist_closed = (data.data == 1)
 
     def _left_gesture_callback(self, data):
-        self._is_left_fist_closed = (data is "Fist")
+        self._is_left_fist_closed = (data.data != 0)
 
 
 def main():
